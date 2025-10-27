@@ -4,20 +4,32 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { Pool } = require('pg');
 const admin = require('firebase-admin');
-
-// Initialize Express
 const app = express();
+
 app.use(cors());
 app.use(bodyParser.json());
 
 // -------------------- 🔥 Firebase Admin Setup --------------------
-// NOTE: You asked not to modify your Firebase setup, so this remains exactly as you provided.
-const serviceAccount = require('./firebase-admin-key.json'); // download from Firebase console
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// ✅ Use environment variable for Render or fallback to local file
+if (process.env.FIREBASE_CONFIG) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log("✅ Firebase Admin initialized from environment");
+} else {
+  try {
+    const serviceAccount = require('./firebase-admin-key.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("✅ Firebase Admin initialized from local file");
+  } catch (error) {
+    console.warn("⚠️ Firebase Admin not initialized. Missing credentials.");
+  }
+}
 
-// Middleware to verify Firebase token
+// -------------------- 🔒 Middleware to verify Firebase token --------------------
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized - Token missing' });
@@ -36,17 +48,16 @@ function verifyToken(req, res, next) {
 }
 
 // -------------------- 🗄️ PostgreSQL (Supabase) Setup --------------------
-// Uses environment variables if provided, otherwise falls back to your original values.
 const db = new Pool({
   host: process.env.DB_HOST || 'db.mxzlmwvbzkgjwmjhwoyf.supabase.co',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'Klmno1234#', // replace with your Supabase DB password or set env var
+  password: process.env.DB_PASSWORD || 'Klmno1234#', // ⚠️ Replace or store in Render env var
   database: process.env.DB_NAME || 'postgres',
   ssl: { rejectUnauthorized: false },
 });
 
-// -------------------- 🚀 Connect to DB --------------------
+// -------------------- 🚀 Start Server after DB connection --------------------
 db.connect((err) => {
   if (err) {
     console.error('❌ Database connection failed:', err);
@@ -54,7 +65,6 @@ db.connect((err) => {
   }
   console.log('✅ Connected to PostgreSQL (Supabase)');
 
-  // Use host-assigned port if provided (Render/Heroku/Railway), otherwise 8080
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   initRoutes();

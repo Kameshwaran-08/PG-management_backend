@@ -50,7 +50,7 @@ function verifyToken(req, res, next) {
 // -------------------- 🗄️ PostgreSQL (Supabase) Setup --------------------
 const db = new Pool({
   host: process.env.DB_HOST || 'db.mxzlmwvbzkgjwmjhwoyf.supabase.co',
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 6543,
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'Klmno1234#', // ⚠️ Replace or store in Render env var
   database: process.env.DB_NAME || 'postgres',
@@ -211,4 +211,5 @@ function initRoutes() {
     });
   });
 }
+
 

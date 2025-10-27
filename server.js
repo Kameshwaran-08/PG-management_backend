@@ -4,32 +4,40 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { Pool } = require('pg');
 const admin = require('firebase-admin');
-const app = express();
 
+// Initialize Express
+const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
 // -------------------- 🔥 Firebase Admin Setup --------------------
-// ✅ Use environment variable for Render or fallback to local file
-if (process.env.FIREBASE_CONFIG) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  console.log("✅ Firebase Admin initialized from environment");
-} else {
-  try {
+let firebaseConfig;
+
+try {
+  // If FIREBASE_CONFIG is provided via environment variable (Render)
+  if (process.env.FIREBASE_CONFIG) {
+    firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
+
+    // Fix escaped newlines in private_key
+    firebaseConfig.private_key = firebaseConfig.private_key.replace(/\\n/g, '\n');
+
+    admin.initializeApp({
+      credential: admin.credential.cert(firebaseConfig),
+    });
+    console.log('✅ Firebase initialized from environment variable.');
+  } else {
+    // Otherwise, fall back to local JSON file (for local testing)
     const serviceAccount = require('./firebase-admin-key.json');
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
-    console.log("✅ Firebase Admin initialized from local file");
-  } catch (error) {
-    console.warn("⚠️ Firebase Admin not initialized. Missing credentials.");
+    console.log('✅ Firebase initialized from local file.');
   }
+} catch (err) {
+  console.warn('⚠️ Firebase Admin not initialized:', err.message);
 }
 
-// -------------------- 🔒 Middleware to verify Firebase token --------------------
+// Middleware to verify Firebase token
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized - Token missing' });
@@ -52,12 +60,12 @@ const db = new Pool({
   host: process.env.DB_HOST || 'db.mxzlmwvbzkgjwmjhwoyf.supabase.co',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 6543,
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'Klmno1234#', // ⚠️ Replace or store in Render env var
+  password: process.env.DB_PASSWORD || 'Klmno1234#',
   database: process.env.DB_NAME || 'postgres',
   ssl: { rejectUnauthorized: false },
 });
 
-// -------------------- 🚀 Start Server after DB connection --------------------
+// -------------------- 🚀 Connect to DB --------------------
 db.connect((err) => {
   if (err) {
     console.error('❌ Database connection failed:', err);
@@ -211,5 +219,4 @@ function initRoutes() {
     });
   });
 }
-
 

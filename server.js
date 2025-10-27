@@ -11,6 +11,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // -------------------- 🔥 Firebase Admin Setup --------------------
+// NOTE: You asked not to modify your Firebase setup, so this remains exactly as you provided.
 const serviceAccount = require('./firebase-admin-key.json'); // download from Firebase console
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -35,12 +36,13 @@ function verifyToken(req, res, next) {
 }
 
 // -------------------- 🗄️ PostgreSQL (Supabase) Setup --------------------
+// Uses environment variables if provided, otherwise falls back to your original values.
 const db = new Pool({
-  host: 'db.mxzlmwvbzkgjwmjhwoyf.supabase.co',
-  port: 5432,
-  user: 'postgres',
-  password: 'Klmno1234#', // replace with your Supabase DB password
-  database: 'postgres',
+  host: process.env.DB_HOST || 'db.mxzlmwvbzkgjwmjhwoyf.supabase.co',
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'Klmno1234#', // replace with your Supabase DB password or set env var
+  database: process.env.DB_NAME || 'postgres',
   ssl: { rejectUnauthorized: false },
 });
 
@@ -51,7 +53,10 @@ db.connect((err) => {
     process.exit(1);
   }
   console.log('✅ Connected to PostgreSQL (Supabase)');
-  app.listen(8080, () => console.log('🚀 Server running on port 8080'));
+
+  // Use host-assigned port if provided (Render/Heroku/Railway), otherwise 8080
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   initRoutes();
 });
 
